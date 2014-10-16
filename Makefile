@@ -12,8 +12,8 @@ boot2docker-parallels.box: boot2docker.iso template.json vagrantfile.tpl \
 	files/bootlocal.sh files/bootsync.sh files/docker-enter files/oem-release
 	packer build -only parallels template.json
 
-#boot2docker.iso:
-#	curl -LO https://github.com/boot2docker/boot2docker/releases/download/v0.9.1/boot2docker.iso
+boot2docker.iso:
+	curl -LO https://github.com/boot2docker/boot2docker/releases/download/v1.3.0/boot2docker.iso
 
 files/docker-enter:
 	curl -L https://raw.githubusercontent.com/YungSang/docker-attach/master/docker-nsenter -o files/docker-enter
