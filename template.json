@@ -14,6 +14,16 @@
         "vboxmanage": [
             ["modifyvm", "{{.Name}}", "--memory", "512"]
         ]
+    },{
+	"name": "vmware",
+        "type": "vmware-iso",
+        "iso_url": "boot2docker.iso",
+        "iso_checksum": "f359d0a1c7a682c8446dfb7f3150097d",
+        "iso_checksum_type": "md5",
+        "boot_wait": "5s",
+        "ssh_username": "docker",
+        "ssh_password": "tcuser",
+        "shutdown_command": "sudo poweroff"
     }, {
         "name": "parallels",
         "type": "parallels-iso",

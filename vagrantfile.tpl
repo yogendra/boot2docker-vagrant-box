@@ -7,9 +7,6 @@ Vagrant.configure("2") do |config|
   config.ssh.shell = "sh"
   config.ssh.username = "docker"
 
-  # Forward the Docker port
-  config.vm.network :forwarded_port, guest: 2375, host: 2375
-
   # Disable synced folder by default
   config.vm.synced_folder ".", "/vagrant", disabled: true
 
@@ -27,7 +24,14 @@ Vagrant.configure("2") do |config|
     v.customize ["modifyvm", :id, "--natdnshostresolver1", "on"]
     v.customize ["modifyvm", :id, "--natdnsproxy1", "on"]
   end
-
+  ["vmware_fusion", "vmware_workstation"].each do |vmware|
+    config.vm.provider vmware do |v|
+      v.vmx["bios.bootOrder"]    = "CDROM,hdd"
+      v.vmx["ide1:0.present"]    = "TRUE"
+      v.vmx["ide1:0.fileName"]   = File.expand_path("../boot2docker.iso", __FILE__)
+      v.vmx["ide1:0.deviceType"] = "cdrom-image"
+    end
+  end
   config.vm.provider :parallels do |p|
     p.check_guest_tools = false
     p.functional_psf = false

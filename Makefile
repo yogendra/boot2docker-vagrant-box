@@ -4,6 +4,12 @@ virtualbox: boot2docker-virtualbox.box
 
 parallels: boot2docker-parallels.box
 
+vmware: boot2docker-vmware.box
+
+boot2docker-vmware.box: boot2docker.iso template.json vagrantfile.tpl \
+	files/bootlocal.sh files/bootsync.sh files/docker-enter files/oem-release
+	packer build -only vmware template.json
+
 boot2docker-virtualbox.box: boot2docker.iso template.json vagrantfile.tpl \
 	files/bootlocal.sh files/bootsync.sh files/docker-enter files/oem-release
 	packer build -only virtualbox template.json
