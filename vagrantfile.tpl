@@ -91,6 +91,7 @@ module VagrantPlugins
                 broadcast = (IPAddr.new(n[:ip]) | (~ IPAddr.new(n[:netmask]))).to_s
                 comm.sudo("#{ifc} down")
                 comm.sudo("if [ -f #{pid} ]; then kill `cat #{pid}` && rm -f #{pid}; fi")
+                comm.sudo("printf 'nameserver 8.8.8.8\nnameserver 8.8.4.4\n' > /etc/resolv.conf")
                 comm.sudo("#{ifc} #{n[:ip]} netmask #{n[:netmask]} broadcast #{broadcast}")
                 comm.sudo("#{ifc} up")
               end
@@ -159,9 +160,6 @@ Vagrant.configure("2") do |config|
       echo #{shq(args)} >> $PROFILE
     fi
 
-    if ! grep -q '8\.8\.8\.8' /etc/resolv.conf >/dev/null; then
-      echo "nameserver 8.8.8.8" >> /etc/resolv.conf
-    fi
     if [ -s "$PROFILE" ]; then
       echo '---> Restarting docker daemon'
       sudo $INITD restart
