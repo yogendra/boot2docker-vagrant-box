@@ -1,34 +1,33 @@
-all: boot2docker-virtualbox.box boot2docker-parallels.box
+BOX_NAME := yogendra/boot2docker-vmware
+ISO_URL := https://github.com/boot2docker/boot2docker/releases/download/v1.9.1/boot2docker.iso
+ISO_SHA256SUM := d1ac84f01f9e3bc9eaf68a38afdbe2accd11b1d6c678d107018b545552cba199
+PACKER_BUILD := packer build --var 'sha256sum=${ISO_SHA256SUM}'
 
-virtualbox: boot2docker-virtualbox.box
-
-parallels: boot2docker-parallels.box
+all: vmware
 
 vmware: boot2docker-vmware.box
+	vagrant box add -f --name ${BOX_NAME} boot2docker-vmware.box
+
 
 boot2docker-vmware.box: boot2docker.iso template.json vagrantfile.tpl \
 	files/bootlocal.sh files/bootsync.sh files/docker-enter files/oem-release
-	packer build -only vmware template.json
+	${PACKER_BUILD} -only vmware template.json
 
-boot2docker-virtualbox.box: boot2docker.iso template.json vagrantfile.tpl \
-	files/bootlocal.sh files/bootsync.sh files/docker-enter files/oem-release
-	packer build -only virtualbox template.json
+boot2docker.iso: get_iso check_iso
 
-boot2docker-parallels.box: boot2docker.iso template.json vagrantfile.tpl \
-	files/bootlocal.sh files/bootsync.sh files/docker-enter files/oem-release
-	packer build -only parallels template.json
+get_iso:
+	@if [ ! -e boot2docker.iso ] ; then curl -LO ${ISO_URL} ; fi
 
-boot2docker.iso:
-	curl -LO https://github.com/boot2docker/boot2docker/releases/download/v1.3.0/boot2docker.iso
+check_iso:
+	@if [ "${ISO_SHA256SUM}" != "$(shasum -a256 boot2docker.iso | awk '{print $1}')" ]; then echo "Checksum mismatch for iso. Try running again after removing boot2docker.iso."; exit ; fi
 
 files/docker-enter:
 	curl -L https://raw.githubusercontent.com/YungSang/docker-attach/master/docker-nsenter -o files/docker-enter
 
-test: test/Vagrantfile boot2docker-virtualbox.box
-	@vagrant box add -f boot2docker boot2docker-virtualbox.box
+test: test/Vagrantfile boot2docker-vmware.box
 	@cd test; \
 	vagrant destroy -f; \
-	vagrant up; \
+	vagrant up vmware-test --provider vmware_fusion; \
 	echo "-----> /etc/os-release"; \
 	vagrant ssh -c "cat /etc/os-release"; \
 	echo "-----> /etc/oem-release"; \
@@ -40,37 +39,16 @@ test: test/Vagrantfile boot2docker-virtualbox.box
 	docker images -t; \
 	echo "-----> docker ps -a"; \
 	docker ps -a; \
-	echo "-----> nc localhost 8080"; \
-	nc localhost 8080; \
 	echo '-----> docker-enter `docker ps -l -q` ls -l'; \
 	vagrant ssh -c 'docker-enter `docker ps -l -q` ls -l'; \
-	vagrant suspend
-
-ptest: DOCKER_HOST_IP=$(shell cd test; vagrant ssh-config | sed -n "s/[ ]*HostName[ ]*//gp")
-ptest: ptestup
-	@cd test; \
-	echo "-----> /etc/os-release"; \
-	vagrant ssh -c "cat /etc/os-release"; \
-	echo "-----> /etc/oem-release"; \
-	vagrant ssh -c "cat /etc/oem-release"; \
-	DOCKER_HOST="tcp://${DOCKER_HOST_IP}:2375"; \
-	echo "-----> docker version"; \
-	docker version; \
-	echo "-----> docker images -t"; \
-	docker images -t; \
-	echo "-----> docker ps -a"; \
-	docker ps -a; \
-	echo "-----> nc ${DOCKER_HOST_IP} 8080"; \
-	nc ${DOCKER_HOST_IP} 8080; \
-	echo '-----> docker-enter `docker ps -l -q` ls -l'; \
-	vagrant ssh -c 'docker-enter `docker ps -l -q` ls -l'; \
-	vagrant suspend
-
-ptestup: test/Vagrantfile boot2docker-parallels.box
-	@vagrant box add -f boot2docker boot2docker-parallels.box
-	@cd test; \
-	vagrant destroy -f; \
-	vagrant up --provider parallels
+	echo "-----> NFS Test"; \
+	vagrant ssh -c 'cat /vagrant/Makefile'; \
+	echo "-----> Docker user persistent home dir"; \
+	vagrant ssh -c 'cat /home/docker/.ssh/authorized_keys'; \
+	vagrant halt; \
+	vagrant up vmware-test --provider vmware_fusion; \
+	vagrant ssh -c 'cat /home/docker/.ssh/authorized_keys'; \
+	vagrant halt
 
 clean:
 	cd test; vagrant destroy -f
@@ -80,4 +58,4 @@ clean:
 	rm -f boot2docker-parallels.box
 	rm -rf output-*/
 
-.PHONY: test clean
+.PHONY: test clean get_iso check_iso

@@ -6,26 +6,17 @@ VAGRANTFILE_API_VERSION = "2"
 Vagrant.require_version ">= 1.5.0"
 
 Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
-  config.vm.define "boot2docker-test"
+  config.vm.synced_folder "..", "/vagrant", type: "nfs", nfs_export: false
 
-  config.vm.box = "boot2docker"
+  config.vm.define "vmware-test" do |test|
+    test.vm.box = "yogendra/boot2docker-vmware"
+    test.vm.box_url = "file://"+ File.dirname(File.expand_path('..', __FILE__)) +"/boot2docker-vmware.box"
 
-  config.vm.provider :virtualbox do |vb, override|
-    override.vm.network "private_network", ip: "192.168.33.10"
-    override.vm.synced_folder ".", "/vagrant"
+    ["vmware_fusion", "vmware_workstation"].each do |vmware|
+      test.vm.provider vmware do |provider|
+        provider.vmx['memsize'] = 2096
+        provider.vmx['numvcpus'] = 2
+      end
+    end
   end
-  config.vm.provider :parallels do |prl, override|
-    override.vm.network "private_network", ip: "192.168.34.10"
-    override.vm.synced_folder ".", "/vagrant", type: "nfs"
-  end
-
-  config.vm.provision :docker do |d|
-    d.pull_images "yungsang/busybox"
-    d.run "simple-echo",
-      image: "yungsang/busybox",
-      args: "-p 8080:8080",
-      cmd: "nc -p 8080 -l -l -e echo hello world!"
-  end
-
-  config.vm.network :forwarded_port, guest: 8080, host: 8080
 end
